@@ -2,6 +2,8 @@ FROM nvcr.io/nvidia/cuda:13.0.2-devel-ubuntu24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
+ARG CACHE_BUSTER=default
+
 COPY ./install_bioc_sysdeps.sh /
 
 RUN { \
@@ -10,7 +12,8 @@ RUN { \
     echo "force-unsafe-io"; \
     } > /etc/dpkg/dpkg.cfg.d/01-docker-optimizations
 
-RUN apt-get update \
+RUN echo "Weekly cache bust: $CACHE_BUSTER" \
+ && apt-get update \
  && apt-get upgrade --assume-yes \
  && apt-get install --assume-yes curl ca-certificates \
  && curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x5E25F516B04C661B" \
