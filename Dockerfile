@@ -32,6 +32,25 @@ RUN echo "Weekly cache bust: $CACHE_BUSTER" \
 RUN echo /usr/local/cuda/targets/x86_64-linux/lib/stubs >>/etc/ld.so.conf.d/000_cuda.conf \
  && ldconfig
 
+RUN echo "NVBLAS_CPU_BLAS_LIB /usr/lib/x86_64-linux-gnu/blas/libblas.so.3" >> /etc/nvblas.conf \
+ && echo "NVBLAS_GPU_LIST ALL" >> /etc/nvblas.conf \
+ && echo "NVBLAS_TILE_DIM 2048" >> /etc/nvblas.conf \
+ && echo "NVBLAS_AUTOPIN_MEM_ENABLED" >> /etc/nvblas.conf
+
+RUN mv /usr/bin/R /usr/bin/R.orig \
+ && echo '#!/bin/bash' > /usr/bin/R \
+ && echo 'export NVBLAS_CONFIG_FILE=/etc/nvblas.conf' >> /usr/bin/R \
+ && echo 'export LD_PRELOAD=/usr/local/cuda/lib64/libnvblas.so' >> /usr/bin/R \
+ && echo 'exec /usr/bin/R.orig "$@"' >> /usr/bin/R \
+ && chmod +x /usr/bin/R
+
+RUN mv /usr/bin/Rscript /usr/bin/Rscript.orig \
+ && echo '#!/bin/bash' > /usr/bin/Rscript \
+ && echo 'export NVBLAS_CONFIG_FILE=/etc/nvblas.conf' >> /usr/bin/Rscript \
+ && echo 'export LD_PRELOAD=/usr/local/cuda/lib64/libnvblas.so'>> /usr/bin/Rscript \
+ && echo 'exec /usr/bin/Rscript.orig "$@"' >> /usr/bin/Rscript \
+ && chmod +x /usr/bin/Rscript
+
 RUN Rscript -e "install.packages('pak', repos = 'https://r-lib.github.io/p/pak/dev/')" \
  && Rscript -e 'pak::pkg_install(c("BiocManager", "devtools")); pak::cache_clean()' \
  && Rscript -e "BiocManager::install(ask = FALSE)" \
