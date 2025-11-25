@@ -1,0 +1,24 @@
+version: 2
+
+registries:
+  nvidia-registry:
+    type: docker-registry
+    url: https://nvcr.io
+    username: ${{ secrets.NVIDIA_REGISTRY_USERNAME }}
+    password: ${{ secrets.NVIDIA_REGISTRY_PASSWORD }}
+
+updates:
+  - package-ecosystem: "docker"
+    directory: "/" 
+    schedule:
+      interval: "daily"
+    registries:
+      - nvidia-registry
+
+  - package-ecosystem: "docker"
+    directory: "/" 
+    target-branch: "cuda12.8"
+    schedule:
+      interval: "daily"
+    registries:
+      - nvidia-registry
