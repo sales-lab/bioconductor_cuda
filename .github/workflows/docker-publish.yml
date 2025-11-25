@@ -1,8 +1,8 @@
-name: Build and Publish Docker Image
+name: Build and Publish Docker Image (CUDA 12.8)
 
 on:
   push:
-    branches: ["main", "devel"]
+    branches: ["cuda12.8"]
   workflow_dispatch:
   schedule:
     - cron: '0 3 * * 0'
@@ -64,10 +64,11 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
+          flavor: |
+            prefix=cuda12.8-,onlatest=true
           tags: |
             type=schedule,pattern={{date 'YYMMDD'}}
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=branch
+            type=raw,value=latest
             type=sha,format=short
 
       - name: Log in to GitHub Container Registry
