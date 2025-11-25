@@ -8,7 +8,47 @@ on:
     - cron: '0 3 * * 0'
 
 jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    outputs:
+      needs_update: ${{ steps.check.outputs.needs_update }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Extract Base Image from Dockerfile
+        id: base-image
+        run: |
+          CUDA_VER=$(grep -E '^ARG CUDA_VERSION=' Dockerfile | cut -d'=' -f2 | tr -d ' "')
+          FROM_LINE=$(grep -E '^FROM' Dockerfile | head -n 1 | awk '{print $2}')
+          RESOLVED_IMAGE=$(echo "$FROM_LINE" | sed "s/\${CUDA_VERSION}/$CUDA_VER/")
+
+          echo "Found version: $CUDA_VER"
+          echo "Found base image: $RESOLVED_IMAGE"
+          
+          echo "image=$RESOLVED_IMAGE" >> $GITHUB_OUTPUT
+          
+      - name: Check for OS updates
+        id: check
+        run: |
+          BASE_IMAGE="${{ steps.base-image.outputs.image }}"
+
+          docker image pull "$BASE_IMAGE"
+          UPDATE_COUNT=$(docker container run --rm --entrypoint /bin/sh "$BASE_IMAGE" \
+            -c "apt-get update -q >/dev/null 2>&1 && apt-get -s upgrade | grep -c '^Inst'")
+          
+          echo "Packages available for update: $UPDATE_COUNT"
+          
+          if [ "$UPDATE_COUNT" -gt 0 ]; then
+             echo "needs_update=true" >> $GITHUB_OUTPUT
+          else
+             echo "needs_update=false" >> $GITHUB_OUTPUT
+          fi
+
   build-and-push:
+    needs: check-updates
+    if: ${{ github.event_name != 'schedule' || needs.check-updates.outputs.needs_update == 'true' }}
+
     runs-on: ubuntu-latest
 
     permissions:
