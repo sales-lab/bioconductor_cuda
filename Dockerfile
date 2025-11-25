@@ -1,11 +1,13 @@
 ARG CUDA_VERSION=13.0.2
 
-FROM nvcr.io/nvidia/cuda:${CUDA_VERSION}-devel-ubuntu24.04
+FROM nvcr.io/nvidia/cuda:${CUDA_VERSION}-devel-ubuntu24.04 AS builder
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG CACHE_BUSTER=default
+ARG CACHE_BUSTER=0
 
 COPY ./install_bioc_sysdeps.sh /
+
+RUN echo "Cache buster: $CACHE_BUSTER"
 
 RUN { \
     echo "path-exclude /usr/share/doc/*"; \
@@ -13,8 +15,7 @@ RUN { \
     echo "force-unsafe-io"; \
     } > /etc/dpkg/dpkg.cfg.d/01-docker-optimizations
 
-RUN echo "Weekly cache bust: $CACHE_BUSTER" \
- && apt-get update \
+RUN apt-get update \
  && apt-get upgrade --assume-yes \
  && apt-get install --assume-yes curl ca-certificates \
  && curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x5E25F516B04C661B" \
@@ -27,6 +28,9 @@ RUN echo "Weekly cache bust: $CACHE_BUSTER" \
  && rm /install_bioc_sysdeps.sh \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
+
+
+FROM builder AS final
 
 # Fix the dynamic linker run-time bindings
 RUN echo /usr/local/cuda/targets/x86_64-linux/lib/stubs >>/etc/ld.so.conf.d/000_cuda.conf \
