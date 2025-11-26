@@ -17,12 +17,21 @@ RUN echo "Weekly cache bust: $CACHE_BUSTER" \
  && apt-get update \
  && apt-get upgrade --assume-yes \
  && apt-get install --assume-yes curl ca-certificates \
- && curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x5E25F516B04C661B" \
+ && curl -sL 'https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc' \
     -o /usr/share/keyrings/marutter.asc \
- && echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/marutter.asc] http://ppa.launchpad.net/marutter/rrutter4.0/ubuntu noble main' \
+ && echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/marutter.asc] https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/' \
     > /etc/apt/sources.list.d/marutter.list \
+ && curl -sL "https://eddelbuettel.github.io/r2u/assets/dirk_eddelbuettel_key.asc" \
+    -o /usr/share/keyrings/eddelbuettel.asc \
+ && echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/eddelbuettel.asc] https://r2u.stat.illinois.edu/ubuntu noble main' \
+    > /etc/apt/sources.list.d/r2u.list \
+ && { echo "Package: *" \
+ &&   echo "Pin: release o=CRAN-Apt Project" \
+ &&   echo "Pin: release l=CRAN-Apt Packages" \
+ &&   echo "Pin-Priority: 700"; \
+    } > /etc/apt/preferences.d/99r2u \
  && apt-get update \
- && apt-get install --assume-yes --no-install-recommends r-base-dev \
+ && apt-get install --assume-yes --no-install-recommends r-base-dev python3-dbus python3-gi python3-apt \
  && bash /install_bioc_sysdeps.sh \
  && rm /install_bioc_sysdeps.sh \
  && apt-get clean \
@@ -51,10 +60,15 @@ RUN mv /usr/bin/Rscript /usr/bin/Rscript.orig \
  && echo 'exec /usr/bin/Rscript.orig "$@"' >> /usr/bin/Rscript \
  && chmod +x /usr/bin/Rscript
 
-RUN Rscript -e "install.packages('pak', repos = 'https://r-lib.github.io/p/pak/dev/')" \
- && Rscript -e 'pak::pkg_install(c("BiocManager", "devtools")); pak::cache_clean()' \
- && Rscript -e "BiocManager::install(ask = FALSE)" \
- && Rscript -e 'BiocManager::install("preprocessCore", configure.args = c(preprocessCore = "--disable-threading"), force=TRUE, ask=FALSE, type="source")'
+RUN Rscript -e 'install.packages("bspm")' \
+ && RHOME=$(R RHOME) \
+ && echo "suppressMessages(bspm::enable())" >> ${RHOME}/etc/Rprofile.site \
+ && echo "options(bspm.version.check=FALSE)" >> ${RHOME}/etc/Rprofile.site \
+ && apt-get update \
+ && Rscript -e 'install.packages(c("BiocManager", "devtools"))' \
+ && Rscript -e 'BiocManager::install("preprocessCore", configure.args = c(preprocessCore = "--disable-threading"), force=TRUE, ask=FALSE, type="source")' \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
 RUN echo "R_LIBS=/usr/lib/R/host-site-library:\${R_LIBS}" > /usr/lib/R/etc/Renviron.site \
  && curl -OL http://bioconductor.org/checkResults/devel/bioc-LATEST/Renviron.bioc \
