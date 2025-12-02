@@ -142,3 +142,7 @@ apt-get install -y --no-install-recommends \
 	libgdal-dev \
 	default-libmysqlclient-dev \
 	libmysqlclient-dev
+
+## libthrust is needed for RbowtieCuda
+apt-get install -y --no-install-recommends \
+	libthrust-dev
