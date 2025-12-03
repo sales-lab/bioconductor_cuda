@@ -1,9 +1,9 @@
-ARG CUDA_VERSION=13.0.2
+ARG CUDA_VERSION=13.1.1
 
 FROM nvcr.io/nvidia/cuda:${CUDA_VERSION}-devel-ubuntu24.04 AS builder
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG CACHE_BUSTER=0
+ARG CACHE_BUSTER=1
 
 COPY ./install_bioc_sysdeps.sh /
 
